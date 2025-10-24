@@ -1,1 +1,76 @@
+import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
+import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.learning.config.Adam;
+import org.nd4j.linalg.lossfunctions.LossFunctions;
+
+public class FashionClassifier {
+
+    public static void main(String[] args) throws Exception {
+
+        int batchSize = 64;
+        int outputNum = 10; // 10 classes
+        int rngSeed = 123;
+        int numEpochs = 3;
+
+        // Load Fashion-MNIST
+        DataSetIterator mnistTrain = new MnistDataSetIterator(batchSize, true, rngSeed);
+        DataSetIterator mnistTest = new MnistDataSetIterator(batchSize, false, rngSeed);
+
+        // Build CNN
+        MultiLayerNetwork model = new MultiLayerNetwork(new NeuralNetConfiguration.Builder()
+                .seed(rngSeed)
+                .updater(new Adam(0.001))
+                .list()
+                .layer(new ConvolutionLayer.Builder(3,3)
+                        .nIn(1)
+                        .stride(1,1)
+                        .nOut(32)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                        .kernelSize(2,2)
+                        .stride(2,2)
+                        .build())
+                .layer(new ConvolutionLayer.Builder(3,3)
+                        .nOut(64)
+                        .stride(1,1)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                        .kernelSize(2,2)
+                        .stride(2,2)
+                        .build())
+                .layer(new DenseLayer.Builder().activation(Activation.RELU).nOut(128).build())
+                .layer(new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                        .nOut(outputNum)
+                        .activation(Activation.SOFTMAX)
+                        .build())
+                .build());
+
+        model.init();
+        model.setListeners(new ScoreIterationListener(10));
+
+        // Train model
+        System.out.println("Training model...");
+        for (int i = 0; i < numEpochs; i++) {
+            model.fit(mnistTrain);
+        }
+
+        // Evaluate
+        System.out.println("Evaluating model...");
+        org.deeplearning4j.eval.Evaluation eval = model.evaluate(mnistTest);
+        System.out.println(eval.stats());
+
+        // Save model
+        System.out.println("Model trained successfully!");
+    }
+}
 
