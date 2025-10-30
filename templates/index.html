@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fashion-MNIST Classifier</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h2>👗 Fashion-MNIST Classifier</h2>
+  <form id="upload-form">
+    <input type="file" id="image" accept="image/*">
+    <button type="submit">Predict</button>
+  </form>
+  <p id="result"></p>
+
+  <script>
+    document.getElementById("upload-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = document.getElementById("image").files[0];
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/predict", { method: "POST", body: formData });
+      const data = await res.json();
+      document.getElementById("result").textContent = "Prediction: " + data.prediction;
+    });
+  </script>
+</body>
+</html>
